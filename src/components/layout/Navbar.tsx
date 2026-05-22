@@ -5,7 +5,7 @@ import useAuth from '@/hooks/useAuth';
 import { APP_NAME } from '@/utils/constants';
 
 export default function Navbar() {
-  const { isAuthenticated, logout, isReady } = useAuth();
+  const { user, isAuthenticated, logout, isReady, loading } = useAuth();
 
   return (
     <header className="navbar">
@@ -18,18 +18,34 @@ export default function Navbar() {
           <li>
             <Link href="/jobs">Jobs</Link>
           </li>
-          <li>
-            <Link href="/companies">Companies</Link>
-          </li>
+          {isAuthenticated && user?.role === 'recruiter' && (
+            <li>
+              <Link href="/companies">Companies</Link>
+            </li>
+          )}
+          {isAuthenticated && (
+            <li>
+              <Link href="/dashboard">Dashboard</Link>
+            </li>
+          )}
         </ul>
 
         <div className="navbar__actions">
-          {!isReady ? (
+          {!isReady || loading ? (
             <span className="navbar__placeholder" />
-          ) : isAuthenticated ? (
-            <button type="button" className="btn btn--ghost" onClick={logout}>
-              Logout
-            </button>
+          ) : isAuthenticated && user ? (
+            <>
+              <span className="navbar__user">
+                {user.name} <small>({user.role})</small>
+              </span>
+              <button
+                type="button"
+                className="btn btn--ghost"
+                onClick={() => logout()}
+              >
+                Logout
+              </button>
+            </>
           ) : (
             <>
               <Link href="/login" className="btn btn--ghost">

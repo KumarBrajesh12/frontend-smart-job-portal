@@ -1,17 +1,44 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
-import { getToken, removeToken } from '@/utils/auth';
+import {
+  clearTokens,
+  getAccessToken,
+  getRefreshToken,
+  setAccessToken,
+  setRefreshToken,
+} from '@/lib/tokenStore';
+const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000',
+  baseURL,
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
+let isRefreshing = false;
+let refreshSubscribers: Array<(token: string) => void> = [];
+
+const subscribeTokenRefresh = (callback: (token: string) => void): void => {
+  refreshSubscribers.push(callback);
+};
+
+const onRefreshed = (token: string): void => {
+  refreshSubscribers.forEach((callback) => callback(token));
+  refreshSubscribers = [];
+};
+
+const onRefreshFailed = (): void => {
+  refreshSubscribers = [];
+  clearTokens();
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('auth:logout'));
+  }
+};
+
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = getToken();
+    const token = getAccessToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -22,16 +49,68 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      removeToken();
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('auth:logout'));
-        if (!window.location.pathname.startsWith('/login')) {
-          window.location.href = '/login';
-        }
+  async (error: AxiosError) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & {
+      _retry?: boolean;
+    };
+
+    const isAuthEndpoint =
+      originalRequest?.url?.includes('/api/auth/login') ||
+      originalRequest?.url?.includes('/api/auth/register') ||
+      originalRequest?.url?.includes('/api/auth/refresh');
+
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry &&
+      !isAuthEndpoint
+    ) {
+      const storedRefresh = getRefreshToken();
+      if (!storedRefresh) {
+        onRefreshFailed();
+        return Promise.reject(error);
+      }
+
+      if (isRefreshing) {
+        return new Promise((resolve) => {
+          subscribeTokenRefresh((token: string) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            resolve(api(originalRequest));
+          });
+        });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const { data } = await axios.post<{
+          accessToken: string;
+          refreshToken: string;
+        }>(`${baseURL}/api/auth/refresh`, { refreshToken: storedRefresh });
+        setAccessToken(data.accessToken);
+        setRefreshToken(data.refreshToken);
+        onRefreshed(data.accessToken);
+        originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
+        return api(originalRequest);
+      } catch (refreshError) {
+        onRefreshFailed();
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
+
+    if (error.response?.status === 401 && !isAuthEndpoint) {
+      onRefreshFailed();
+      if (
+        typeof window !== 'undefined' &&
+        !window.location.pathname.startsWith('/login')
+      ) {
+        window.location.href = '/login';
+      }
+    }
+
     return Promise.reject(error);
   },
 );
