@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import useAuth from '../../hooks/useAuth';
-import { APP_NAME } from '../../utils/constants';
+import useAuth from '@/hooks/useAuth';
+import { APP_NAME } from '@/utils/constants';
 
 export default function Navbar() {
   const { isAuthenticated, logout, isReady } = useAuth();

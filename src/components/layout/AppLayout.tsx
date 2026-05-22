@@ -1,6 +1,11 @@
+import type { ReactNode } from 'react';
 import Navbar from './Navbar';
 
-export default function AppLayout({ children }) {
+interface AppLayoutProps {
+  children: ReactNode;
+}
+
+export default function AppLayout({ children }: AppLayoutProps) {
   return (
     <div className="app-layout">
       <Navbar />

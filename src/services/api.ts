@@ -1,5 +1,5 @@
-import axios from 'axios';
-import { getToken, removeToken } from '../utils/auth';
+import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import { getToken, removeToken } from '@/utils/auth';
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000',
@@ -10,20 +10,19 @@ const api = axios.create({
 });
 
 api.interceptors.request.use(
-  (config) => {
+  (config: InternalAxiosRequestConfig) => {
     const token = getToken();
     if (token) {
-      // eslint-disable-next-line no-param-reassign
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => Promise.reject(error),
+  (error: AxiosError) => Promise.reject(error),
 );
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  (error: AxiosError) => {
     if (error.response?.status === 401) {
       removeToken();
       if (typeof window !== 'undefined') {

@@ -1,9 +1,10 @@
 # Smart Job Portal — Frontend
 
-Production-grade frontend for the Smart Job Portal. Built with **Next.js 15** (App Router), **React 19**, and **Axios**.
+Production-grade frontend for the Smart Job Portal. Built with **TypeScript**, **Next.js 15** (App Router), **React 19**, and **Axios**.
 
 ## Tech stack
 
+- TypeScript 5
 - Next.js 15 (App Router — no Vite, no Pages Router)
 - React 19
 - Axios with JWT interceptors
@@ -48,15 +49,18 @@ App runs at **http://localhost:3000**
 
 ```
 frontend-smart-job-portal/
+├── tsconfig.json
+├── next.config.ts
 ├── src/
 │   ├── app/              # Next.js App Router (routes)
-│   │   ├── layout.js
-│   │   ├── page.js
+│   │   ├── layout.tsx
+│   │   ├── page.tsx
 │   │   ├── globals.css
 │   │   ├── login/
 │   │   ├── register/
 │   │   ├── jobs/
 │   │   └── companies/
+│   ├── types/            # Shared TypeScript types (API, auth)
 │   ├── pages/            # Docs only (see README — avoids Pages Router conflict)
 │   ├── components/pages/ # Page-level content components
 │   ├── components/       # Reusable UI (AppLayout, Navbar)
@@ -69,7 +73,7 @@ frontend-smart-job-portal/
 
 ## API client
 
-`src/services/api.js` provides:
+`src/services/api.ts` provides:
 
 - Base URL from `NEXT_PUBLIC_API_URL`
 - Request interceptor — attaches `Authorization: Bearer <token>`
@@ -77,7 +81,7 @@ frontend-smart-job-portal/
 
 ## Auth flow
 
-```js
+```ts
 import useAuth from '@/hooks/useAuth';
 
 const { login, logout, isAuthenticated } = useAuth();

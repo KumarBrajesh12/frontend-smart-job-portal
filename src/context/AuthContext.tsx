@@ -7,13 +7,19 @@ import {
   useEffect,
   useMemo,
   useState,
+  type ReactNode,
 } from 'react';
-import { getToken, removeToken, setToken } from '../utils/auth';
+import { getToken, removeToken, setToken } from '@/utils/auth';
+import type { AuthContextValue } from '@/types/auth';
 
-const AuthContext = createContext(null);
+const AuthContext = createContext<AuthContextValue | null>(null);
 
-export function AuthProvider({ children }) {
-  const [token, setTokenState] = useState(null);
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export function AuthProvider({ children }: AuthProviderProps) {
+  const [token, setTokenState] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
@@ -28,7 +34,7 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener('auth:logout', handleLogout);
   }, []);
 
-  const login = useCallback((accessToken) => {
+  const login = useCallback((accessToken: string) => {
     setToken(accessToken);
     setTokenState(accessToken);
   }, []);
@@ -38,7 +44,7 @@ export function AuthProvider({ children }) {
     setTokenState(null);
   }, []);
 
-  const value = useMemo(
+  const value = useMemo<AuthContextValue>(
     () => ({
       token,
       isAuthenticated: Boolean(token),
@@ -52,7 +58,7 @@ export function AuthProvider({ children }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export function useAuthContext() {
+export function useAuthContext(): AuthContextValue {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuthContext must be used within AuthProvider');

@@ -1,30 +1,37 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import api from '../../services/api';
+import { isAxiosError } from 'axios';
+import api from '@/services/api';
+import type { HealthResponse } from '@/types/api';
 
 export default function HomeContent() {
-  const [health, setHealth] = useState(null);
-  const [error, setError] = useState(null);
+  const [health, setHealth] = useState<HealthResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchHealth = async () => {
       try {
-        const { data } = await api.get('/health');
+        const { data } = await api.get<HealthResponse>('/health');
         setHealth(data);
       } catch (err) {
-        setError(
-          err.response?.data?.message ||
-            err.message ||
-            'Unable to reach the API',
-        );
+        if (isAxiosError(err)) {
+          const message =
+            (err.response?.data as { message?: string })?.message ??
+            err.message;
+          setError(message);
+        } else if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError('Unable to reach the API');
+        }
       } finally {
         setLoading(false);
       }
     };
 
-    fetchHealth();
+    void fetchHealth();
   }, []);
 
   return (
